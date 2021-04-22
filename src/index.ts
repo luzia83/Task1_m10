@@ -94,4 +94,3 @@ svg
       console.log(covidAfter);
       updateChart(covidAfter);
   });
-  
