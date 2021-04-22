@@ -24,10 +24,16 @@ const affectedRadiusScale = d3
   .domain([10,50,100,500,1000,5000])
   .range([5,10,30,50,70,100]);
 
-const calculateRadiusBasedOnAffectedCases = (comunidad: string) => { 
-  const entry = datos.find((item) => item.name === comunidad);
-  var max = datos.reduce((max, item) => (item.value > max ? item.value: max), 0);
+const calculateRadiusBasedOnAffectedCases = (comunidad: string, data: resultado[]) => { 
+  const entry = data.find((item) => item.name === comunidad);
+  
   return entry ? affectedRadiusScale(entry.value) : 0;
+};
+
+const affectedCasesByCommunity = (comunidad: string) => {
+  const entry = datos.find((item) => item.name === comunidad);
+
+  return entry ? entry.value : 0;
 };
 
 const aProjection = d3Composite
@@ -59,39 +65,48 @@ svg
   .attr("class", "country")
   .attr("d", geoPath as any);
 
-svg
-  .selectAll("circle")
-  .data(latLongCommunities)
-  .enter()
-  .append("circle")
-  .attr("class", "affected-marker")
-  .attr("r", (d) => calculateRadiusBasedOnAffectedCases(d.name))
-  .attr("cx", (d) => aProjection([d.long, d.lat])[0])
-  .attr("cy", (d) => aProjection([d.long, d.lat])[1]);
-
   const updateChart = (covid: resultado[]) => {
     datos = covid;
-    svg
+    svg.selectAll("circle").remove();
+    return svg
       .selectAll("circle")
       .data(latLongCommunities)
-      .transition()
-      .duration(800)
-      .attr("r", (d) => {
-        return calculateRadiusBasedOnAffectedCases(d.name);
+      .enter()
+      .append("circle")
+      .attr("class", "affected-marker")
+      .attr("r", (d) => calculateRadiusBasedOnAffectedCases(d.name, covid))
+      .attr("cx", (d) => aProjection([d.long, d.lat])[0])
+      .attr("cy", (d) => aProjection([d.long, d.lat])[1])
+      .on("mouseover", function (e: any, datum: any) {
+        d3.select(this).attr("transform", "");
+        const CCAAname = datum.name;
+        const CCAAcases = affectedCasesByCommunity(CCAAname);
+        console.log(CCAAname);
+        console.log(CCAAcases);
+        console.log(datum);
+        console.log(e);
+        const coords = { x: e.x, y: e.y };
+        div.transition().duration(200).style("opacity", 0.9);
+        div
+          .html(`<span>${CCAAname}: ${CCAAcases}</span>`)
+          .style("left", `${coords.x}px`)
+          .style("top", `${coords.y - 28}px`);
+      })
+      .on("mouseout", function (datum) {
+        d3.select(this).attr("transform", "");
+        div.transition().duration(500).style("opacity", 0);
       });
   };
   
   document
     .getElementById("CovidBefore")
     .addEventListener("click", function () {
-      console.log(covidBefore);
       updateChart(covidBefore);
   });
   
   document
     .getElementById("CovidAfter")
     .addEventListener("click", function () {
-      console.log(covidAfter);
       updateChart(covidAfter);
   });
   
